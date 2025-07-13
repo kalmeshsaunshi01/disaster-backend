@@ -864,7 +864,7 @@ import cv2
 from auth import auth_bp  # Import authentication routes
 
 app = Flask(__name__)
-CORS(app, resources={r"/upload": {"origins": "*"}}, expose_headers="Content-Type")
+CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for testing
 
 # Register authentication routes
 app.register_blueprint(auth_bp)
@@ -952,9 +952,7 @@ def process_image(image_path):
     except Exception as e:
         print(f"[ERROR] Image processing failed: {e}")
         return None, None, None, None
-@app.route('/')
-def home():
-    return "Disaster backend is running ✅"
+
 
 @app.route('/upload', methods=['POST'])
 def upload():
