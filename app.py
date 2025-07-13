@@ -863,7 +863,7 @@ from auth import auth_bp  # Authentication routes
 app = Flask(__name__)
 
 # ✅ Allow requests from frontend (localhost + Vercel)
-CORS(app, origins=["http://localhost:3000", "https://disaster-frontend-5khq.vercel.app"], supports_credentials=True)
+CORS(app,  supports_credentials=True)
 
 # ✅ Register auth blueprint
 app.register_blueprint(auth_bp)
