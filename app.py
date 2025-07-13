@@ -952,6 +952,9 @@ def process_image(image_path):
     except Exception as e:
         print(f"[ERROR] Image processing failed: {e}")
         return None, None, None, None
+@app.route('/')
+def home():
+    return "Disaster backend is running ✅"
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -991,5 +994,6 @@ def get_mask(filename):
     return send_from_directory(app.config["MASK_FOLDER"], filename)
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))  # Use Render’s port or default to 5000
+    port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port, debug=True)
+
