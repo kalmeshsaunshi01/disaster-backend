@@ -864,7 +864,7 @@ import cv2
 from auth import auth_bp  # Import authentication routes
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/upload": {"origins": "*"}}, expose_headers="Content-Type")
 
 # Register authentication routes
 app.register_blueprint(auth_bp)
@@ -972,8 +972,8 @@ def upload():
 
         if resized_image_path and mask_path and predicted_disaster:
             results.append({
-                "original_url": f"http://127.0.0.1:5000/uploads/{os.path.basename(resized_image_path)}",
-                "mask_url": f"http://127.0.0.1:5000/masks/{os.path.basename(mask_path)}",
+                "original_url": request.host_url + f"uploads/{os.path.basename(resized_image_path)}",
+                "mask_url": request.host_url + f"masks/{os.path.basename(mask_path)}",
                 "disaster_class": predicted_disaster,
                 "accuracy": confidence_score
             })
