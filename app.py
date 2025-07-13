@@ -864,7 +864,7 @@ from auth import auth_bp  # Your existing auth Blueprint
 app = Flask(__name__)
 
 # ✅ Allow both local and Vercel frontend
-CORS(app, supports_credentials=True)
+CORS(app)
 
 
 # Register auth routes
