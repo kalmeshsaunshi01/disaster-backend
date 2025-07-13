@@ -881,14 +881,24 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MASK_FOLDER"] = MASK_FOLDER
 
 # ✅ Load model
+# MODEL_PATH = "disaster_multi_output_model.keras"
+
+# IMG_SIZE = (256, 256)
+# try:
+#     model = load_model(MODEL_PATH)
+#     print("[INFO] Model loaded successfully.")
+# except Exception as e:
+#     print(f"[ERROR] Failed to load model: {e}")
+#     model = None
 MODEL_PATH = "disaster_multi_output_model.keras"
 IMG_SIZE = (256, 256)
 try:
     model = load_model(MODEL_PATH)
-    print("[INFO] Model loaded successfully.")
+    print(f"[INFO] Model loaded successfully from: {MODEL_PATH}")
 except Exception as e:
-    print(f"[ERROR] Failed to load model: {e}")
+    print(f"[ERROR] Failed to load model from {MODEL_PATH}: {e}")
     model = None
+
 
 disaster_classes = ["Deforestation", "Landslide", "Flood"]
 
