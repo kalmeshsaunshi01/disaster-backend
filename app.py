@@ -851,7 +851,6 @@
 #     app.run(debug=True)
 
 
-
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
@@ -863,11 +862,17 @@ import cv2
 from auth import auth_bp  # Your existing auth Blueprint
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)  # Allow all origins
 
+# ✅ Allow both local and Vercel frontend
+CORS(app, origins=[
+    "http://localhost:3000",
+    "https://disaster-frontend-5khq.vercel.app"
+])
+
+# Register auth routes
 app.register_blueprint(auth_bp)
 
-# Define folders
+# Folder config
 UPLOAD_FOLDER = "uploads"
 MASK_FOLDER = "masks"
 
@@ -877,9 +882,9 @@ os.makedirs(MASK_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MASK_FOLDER"] = MASK_FOLDER
 
+# ✅ Load model
 MODEL_PATH = "disaster_multi_output_model.keras"
 IMG_SIZE = (256, 256)
-
 try:
     model = load_model(MODEL_PATH)
     print("[INFO] Model loaded successfully.")
@@ -891,7 +896,7 @@ disaster_classes = ["Deforestation", "Landslide", "Flood"]
 
 def process_image(image_path):
     try:
-        print(f"[DEBUG] Processing Image: {image_path}")
+        print(f"[DEBUG] Processing: {image_path}")
         if not os.path.exists(image_path):
             return None, None, None, None
 
@@ -925,7 +930,7 @@ def process_image(image_path):
         predicted_disaster = disaster_classes[predicted_class_index]
         return image_path, mask_path, predicted_disaster, confidence_score
     except Exception as e:
-        print(f"[ERROR] Processing failed: {e}")
+        print(f"[ERROR] Image processing failed: {e}")
         return None, None, None, None
 
 @app.route('/upload', methods=['POST'])
@@ -965,7 +970,5 @@ def get_original(filename):
 def get_mask(filename):
     return send_from_directory(app.config["MASK_FOLDER"], filename)
 
-if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    print(f"[INFO] Starting Flask on port {port}...")
-    app.run(host='0.0.0.0', port=port, debug=True)
+# ❌ DO NOT use app.run() in production (Render uses gunicorn)
+# So we skip: if __name__ == '__main__':
