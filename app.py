@@ -850,8 +850,7 @@
 # if __name__ == '__main__':
 #     app.run(debug=True)
 
-
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, send_from_directory, make_response
 from flask_cors import CORS
 import os
 import numpy as np
@@ -859,40 +858,28 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import cv2
-from auth import auth_bp  # Your existing auth Blueprint
-from flask import make_response
+from auth import auth_bp  # Authentication routes
 
 app = Flask(__name__)
 
-# ✅ Allow both local and Vercel frontend
-CORS(app, supports_credentials=True)
+# ✅ Allow requests from frontend (localhost + Vercel)
+CORS(app, origins=["http://localhost:3000", "https://disaster-frontend-5khq.vercel.app"], supports_credentials=True)
 
-
-# Register auth routes
+# ✅ Register auth blueprint
 app.register_blueprint(auth_bp)
 
-# Folder config
+# ✅ Folder setup
 UPLOAD_FOLDER = "uploads"
 MASK_FOLDER = "masks"
-
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(MASK_FOLDER, exist_ok=True)
-
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MASK_FOLDER"] = MASK_FOLDER
 
-# ✅ Load model
-# MODEL_PATH = "disaster_multi_output_model.keras"
-
-# IMG_SIZE = (256, 256)
-# try:
-#     model = load_model(MODEL_PATH)
-#     print("[INFO] Model loaded successfully.")
-# except Exception as e:
-#     print(f"[ERROR] Failed to load model: {e}")
-#     model = None
+# ✅ Load the ML model
 MODEL_PATH = "disaster_multi_output_model.keras"
 IMG_SIZE = (256, 256)
+
 try:
     model = load_model(MODEL_PATH)
     print(f"[INFO] Model loaded successfully from: {MODEL_PATH}")
@@ -900,9 +887,9 @@ except Exception as e:
     print(f"[ERROR] Failed to load model from {MODEL_PATH}: {e}")
     model = None
 
-
 disaster_classes = ["Deforestation", "Landslide", "Flood"]
 
+# ✅ Image processing function
 def process_image(image_path):
     try:
         print(f"[DEBUG] Processing: {image_path}")
@@ -914,7 +901,6 @@ def process_image(image_path):
         img_array = np.expand_dims(img_array, axis=0)
 
         predictions = model.predict(img_array)
-
         predicted_mask = predictions[0]
         predicted_class_index = np.argmax(predictions[1])
         confidence_score = np.max(predictions[1]) * 100
@@ -933,7 +919,7 @@ def process_image(image_path):
 
         predicted_mask_resized = cv2.resize(predicted_mask, display_size)
         mask_filename = f"mask_{os.path.basename(image_path)}"
-        mask_path = os.path.join(app.config["MASK_FOLDER"], mask_filename)
+        mask_path = os.path.join(MASK_FOLDER, mask_filename)
         cv2.imwrite(mask_path, predicted_mask_resized)
 
         predicted_disaster = disaster_classes[predicted_class_index]
@@ -942,12 +928,11 @@ def process_image(image_path):
         print(f"[ERROR] Image processing failed: {e}")
         return None, None, None, None
 
+# ✅ Upload route
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'files[]' not in request.files:
-        response = make_response(jsonify({"error": "No files uploaded"}), 400)
-        response.headers.add("Access-Control-Allow-Origin", "*")
-        return response
+        return jsonify({"error": "No files uploaded"}), 400
 
     files = request.files.getlist('files[]')
     results = []
@@ -956,7 +941,7 @@ def upload():
         if file.filename == '':
             continue
 
-        file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
+        file_path = os.path.join(UPLOAD_FOLDER, file.filename)
         file.save(file_path)
 
         resized_image_path, mask_path, predicted_disaster, confidence_score = process_image(file_path)
@@ -973,13 +958,14 @@ def upload():
 
     return jsonify({"results": results})
 
+# ✅ Serve original and mask images
 @app.route('/uploads/<filename>')
 def get_original(filename):
-    return send_from_directory(app.config["UPLOAD_FOLDER"], filename)
+    return send_from_directory(UPLOAD_FOLDER, filename)
 
 @app.route('/masks/<filename>')
 def get_mask(filename):
-    return send_from_directory(app.config["MASK_FOLDER"], filename)
+    return send_from_directory(MASK_FOLDER, filename)
 
-# ❌ DO NOT use app.run() in production (Render uses gunicorn)
-# So we skip: if __name__ == '__main__':
+# ❗ Do NOT include app.run() — Render uses Gunicorn
+# No `if __name__ == "__main__"` block
