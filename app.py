@@ -864,7 +864,7 @@ import cv2
 from auth import auth_bp  # Import authentication routes
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}})  # Allow all origins for testing
+CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://disaster-frontend.onrender.com"]}})  # Allow all origins for testing
 
 # Register authentication routes
 app.register_blueprint(auth_bp)
