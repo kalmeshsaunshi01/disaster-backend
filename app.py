@@ -860,11 +860,12 @@ from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import cv2
 from auth import auth_bp  # Your existing auth Blueprint
+from flask import make_response
 
 app = Flask(__name__)
 
 # ✅ Allow both local and Vercel frontend
-CORS(app)
+CORS(app, supports_credentials=True)
 
 
 # Register auth routes
@@ -944,7 +945,9 @@ def process_image(image_path):
 @app.route('/upload', methods=['POST'])
 def upload():
     if 'files[]' not in request.files:
-        return jsonify({"error": "No files uploaded"}), 400
+        response = make_response(jsonify({"error": "No files uploaded"}), 400)
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        return response
 
     files = request.files.getlist('files[]')
     results = []
