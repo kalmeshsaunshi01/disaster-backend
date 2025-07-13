@@ -852,7 +852,6 @@
 
 
 
-
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
@@ -861,15 +860,14 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.keras.models import load_model
 import cv2
-from auth import auth_bp  # Import authentication routes
+from auth import auth_bp  # Your existing auth Blueprint
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["http://localhost:3000", "https://disaster-frontend.onrender.com"]}})  # Allow all origins for testing
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)  # Allow all origins
 
-# Register authentication routes
 app.register_blueprint(auth_bp)
 
-# Define folders for uploads and masks
+# Define folders
 UPLOAD_FOLDER = "uploads"
 MASK_FOLDER = "masks"
 
@@ -879,80 +877,56 @@ os.makedirs(MASK_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 app.config["MASK_FOLDER"] = MASK_FOLDER
 
-# Load the ML model
 MODEL_PATH = "disaster_multi_output_model.keras"
-IMG_SIZE = (256, 256)  # Model expects 256x256 images
+IMG_SIZE = (256, 256)
 
 try:
     model = load_model(MODEL_PATH)
     print("[INFO] Model loaded successfully.")
 except Exception as e:
     print(f"[ERROR] Failed to load model: {e}")
-    model = None  # Handle failure gracefully
+    model = None
 
-# Disaster classes
 disaster_classes = ["Deforestation", "Landslide", "Flood"]
 
 def process_image(image_path):
     try:
         print(f"[DEBUG] Processing Image: {image_path}")
-
-        # Ensure the file exists before processing
         if not os.path.exists(image_path):
-            print(f"[ERROR] File not found: {image_path}")
             return None, None, None, None
 
-        # 🔥 Resize the image to 256x256 for model prediction
         img = load_img(image_path, target_size=IMG_SIZE)
-        img_array = img_to_array(img) / 255.0  # Normalize
-        img_array = np.expand_dims(img_array, axis=0)  # Add batch dimension
+        img_array = img_to_array(img) / 255.0
+        img_array = np.expand_dims(img_array, axis=0)
 
-        # Run model prediction
-        print("[INFO] Making prediction...")
         predictions = model.predict(img_array)
 
-        # Extract prediction results
-        predicted_mask = predictions[0]  # Segmentation mask
-        predicted_class_index = np.argmax(predictions[1])  # Disaster class
-        confidence_score = np.max(predictions[1]) * 100  # Confidence percentage
+        predicted_mask = predictions[0]
+        predicted_class_index = np.argmax(predictions[1])
+        confidence_score = np.max(predictions[1]) * 100
 
-        # Convert predicted mask to an image
         predicted_mask = (predicted_mask.squeeze() * 255).astype(np.uint8)
-
-        # Convert grayscale to RGB if needed
         if len(predicted_mask.shape) == 2:
             predicted_mask = cv2.cvtColor(predicted_mask, cv2.COLOR_GRAY2RGB)
 
-        # 🔥 Resize images for frontend display (512x512)
-        display_size = (512, 512)
-
-        # Load and resize original image
         original_img = cv2.imread(image_path)
         if original_img is None:
-            print(f"[ERROR] OpenCV failed to load image: {image_path}")
             return None, None, None, None
 
-        original_resized = cv2.resize(original_img, display_size, interpolation=cv2.INTER_LINEAR)
-
-        # 🔥 Overwrite the original file with resized image
+        display_size = (512, 512)
+        original_resized = cv2.resize(original_img, display_size)
         cv2.imwrite(image_path, original_resized)
 
-        # Resize predicted mask
-        predicted_mask_resized = cv2.resize(predicted_mask, display_size, interpolation=cv2.INTER_NEAREST)
-
-        # Save resized mask
+        predicted_mask_resized = cv2.resize(predicted_mask, display_size)
         mask_filename = f"mask_{os.path.basename(image_path)}"
         mask_path = os.path.join(app.config["MASK_FOLDER"], mask_filename)
         cv2.imwrite(mask_path, predicted_mask_resized)
 
         predicted_disaster = disaster_classes[predicted_class_index]
-
-        print(f"[INFO] Prediction Complete: {predicted_disaster} ({confidence_score:.2f}%)")
         return image_path, mask_path, predicted_disaster, confidence_score
     except Exception as e:
-        print(f"[ERROR] Image processing failed: {e}")
+        print(f"[ERROR] Processing failed: {e}")
         return None, None, None, None
-
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -979,7 +953,7 @@ def upload():
                 "accuracy": confidence_score
             })
         else:
-            return jsonify({"error": "Processing failed for some images"}), 500
+            return jsonify({"error": "Processing failed"}), 500
 
     return jsonify({"results": results})
 
@@ -993,5 +967,5 @@ def get_mask(filename):
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
+    print(f"[INFO] Starting Flask on port {port}...")
     app.run(host='0.0.0.0', port=port, debug=True)
-
