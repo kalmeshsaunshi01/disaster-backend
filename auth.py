@@ -42,13 +42,14 @@
 #     app.run(debug=True)
 
 from flask import Blueprint, request, jsonify
-import pymongo
+from pymongo import MongoClient
 import bcrypt
-
+import os
 auth_bp = Blueprint("auth", __name__)
 
 # MongoDB Connection
-client = pymongo.MongoClient("mongodb://localhost:27017/")
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
 db = client["AuthDatabase"]
 users_collection = db["users"]
 
