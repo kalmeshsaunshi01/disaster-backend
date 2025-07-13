@@ -3,7 +3,7 @@ Flask-Cors==5.0.1
 Flask-Bcrypt==1.0.1
 Flask-PyMongo==3.0.1
 Flask-Session==0.8.0
-tensorflow==2.13.0
+tensorflow==2.19.0
 keras==3.9.0
 opencv-python==4.11.0.86
 opencv-python-headless==4.11.0.86
